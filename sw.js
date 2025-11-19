@@ -1,8 +1,16 @@
-const CACHE_NAME = 'fitness-app-v1';
+const CACHE_NAME = 'fitness-app-v2'; // עדכון גרסה
 const urlsToCache = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  // ספריות חיצוניות
+  'https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js',
+  'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js',
+  'https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js',
+  'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js',
+  'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js',
+  // אייקון
+  'https://cdn-icons-png.flaticon.com/512/2548/2548527.png'
 ];
 
 // התקנה: שמירת קבצים בזיכרון

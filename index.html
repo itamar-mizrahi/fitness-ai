@@ -1,221 +1,361 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>מאמן כפיפות מרפקים 💪</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מאמן כושר חכם 🏋️‍♂️🔐</title>
+    
+    <!-- ספריות MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
     <style>
-      body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        background-color: #2c3e50;
-        color: white;
-        font-family: sans-serif;
-        margin: 0;
-        padding: 20px;
-      }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        h1, h2 { margin-bottom: 20px; }
 
-      .video-container {
-        position: relative;
-        width: 640px;
-        height: 480px;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-        background: black;
-      }
+        /* עיצוב טופס ההתחברות */
+        #login-screen {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            display: flex; /* גמיש כדי למרכז */
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 50px;
+        }
+        
+        input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box; /* כדי שה-padding לא יגדיל את הרוחב */
+        }
 
-      video {
-        display: none;
-      }
-
-      canvas {
-        width: 100%;
-        height: 100%;
-        transform: scaleX(-1);
-      }
-
-      /* כרטיס המידע על המסך */
-      .counter-card {
-        position: absolute;
-        top: 10px;
-        right: 10px; /* בגלל שהפכנו את הקנבס, זה ייראה בצד שמאל */
-        background-color: rgba(255, 255, 255, 0.8);
-        padding: 15px;
-        border-radius: 10px;
-        color: black;
-        font-size: 24px;
-        font-weight: bold;
-        z-index: 10;
-      }
-
-      .count-number {
-        font-size: 48px;
-        color: #e74c3c;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>💪 מונה כפיפות מרפקים</h1>
-
-    <div class="video-container">
-      <div class="counter-card">
-        <div>חזרות:</div>
-        <div id="counter" class="count-number">0</div>
-        <div id="feedback" style="font-size: 18px; color: blue">תתחיל!</div>
-        <button
-          onclick="saveData()"
-          style="
-            margin-top: 10px;
-            padding: 10px;
-            background: green;
+        button {
+            padding: 12px;
+            background: #007bff;
             color: white;
             border: none;
-            border-radius: 5px;
-          "
-        >
-          💾 שמור אימון
-        </button>
-      </div>
-      <video id="input_video"></video>
-      <canvas id="output_canvas" width="640" height="480"></canvas>
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+            width: 100%;
+        }
+
+        button:hover { background: #0056b3; }
+        
+        button.secondary {
+            background: #6c757d;
+            margin-top: 10px;
+        }
+        button.secondary:hover { background: #545b62; }
+
+        button.success {
+            background: #28a745;
+        }
+        button.success:hover { background: #218838; }
+
+        /* מסך האימון (מוסתר בהתחלה) */
+        #workout-screen {
+            display: none;
+            width: 100%;
+            max-width: 800px;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 4/3; /* יחס רוחב-גובה קבוע */
+            margin: 20px auto;
+            background: black;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        video { display: none; }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1); /* מראה */
+            display: block;
+        }
+
+        /* כרטיס המידע על המסך */
+        .counter-card {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: #333;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        
+        .count-number {
+            font-size: 64px;
+            color: #dc3545;
+            margin: 5px 0;
+            line-height: 1;
+        }
+        
+        #feedback {
+            font-size: 18px;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+
+        #user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. מסך התחברות -->
+    <div id="login-screen">
+        <h2>🏋️‍♂️ התחברות למאמן האישי</h2>
+        <input type="email" id="email" placeholder="כתובת אימייל">
+        <input type="password" id="password" placeholder="סיסמה">
+        <button onclick="handleLogin()">התחבר / הרשם</button>
+        <p id="login-msg" style="color: #dc3545; margin: 10px 0 0; font-size: 14px;"></p>
     </div>
 
-    <script>
-      const videoElement = document.getElementById("input_video");
-      const canvasElement = document.getElementById("output_canvas");
-      const canvasCtx = canvasElement.getContext("2d");
-      const countElement = document.getElementById("counter");
-      const feedbackElement = document.getElementById("feedback");
+    <!-- 2. מסך האימון (יופיע רק אחרי התחברות) -->
+    <div id="workout-screen">
+        <div id="user-info">
+            <span>שלום, <b id="user-email"></b> 👋</span>
+            <button onclick="handleLogout()" style="width: auto; padding: 8px 15px; font-size: 14px;" class="secondary">יציאה</button>
+        </div>
 
-      // משתנים לניהול הספירה
-      let counter = 0;
-      let stage = "down"; // המצב הנוכחי של היד (למטה/למעלה)
+        <div class="video-container">
+            <div class="counter-card">
+                <div>חזרות</div>
+                <div id="counter" class="count-number">0</div>
+                <div id="feedback">מוכן?</div>
+                <button onclick="saveData()" class="success" style="font-size: 14px; padding: 8px;">💾 שמור</button>
+            </div>
+            <video id="input_video"></video>
+            <canvas id="output_canvas" width="640" height="480"></canvas>
+        </div>
+    </div>
 
-      // פונקציה לחישוב זווית בין 3 נקודות
-      function calculateAngle(a, b, c) {
-        let radians =
-          Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-        let angle = Math.abs((radians * 180.0) / Math.PI);
-        if (angle > 180.0) angle = 360 - angle;
-        return angle;
-      }
+    <!-- טעינת Firebase והלוגיקה הראשית -->
+    <script type="module">
+        // --- ייבוא ספריות Firebase ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } 
+            from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-      function onResults(results) {
-        canvasCtx.save();
-        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        canvasCtx.drawImage(
-          results.image,
-          0,
-          0,
-          canvasElement.width,
-          canvasElement.height
-        );
+        // --- הקונפיגורציה שלך (הועתקה במדויק) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzgdcJASKzZz9azdNrmrJz3MWhlBcdvyg",
+            authDomain: "fitness-auth-54d4d.firebaseapp.com",
+            projectId: "fitness-auth-54d4d",
+            storageBucket: "fitness-auth-54d4d.firebasestorage.app",
+            messagingSenderId: "355871344430",
+            appId: "1:355871344430:web:3cedacd33df478bf665cbf",
+            measurementId: "G-QXP15SPSHC"
+        };
 
-        if (results.poseLandmarks) {
-          // ציור השלד
-          drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {
-            color: "#00FF00",
-            lineWidth: 4,
-          });
-          drawLandmarks(canvasCtx, results.poseLandmarks, {
-            color: "#FF0000",
-            lineWidth: 2,
-          });
+        // אתחול Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        let currentUser = null;
 
-          // --- הלוגיקה של הספירה ---
-          // נקודות מפתח (MediaPipe Indexes):
-          // 11 = כתף שמאל, 13 = מרפק שמאל, 15 = שורש כף יד שמאל
-          const shoulder = results.poseLandmarks[11];
-          const elbow = results.poseLandmarks[13];
-          const wrist = results.poseLandmarks[15];
-
-          // וידוא שהמצלמה רואה את כל היד
-          if (shoulder && elbow && wrist) {
-            // חישוב הזווית
-            const angle = calculateAngle(shoulder, elbow, wrist);
-
-            // בדיקת מצב היד
-            if (angle > 160) {
-              stage = "down";
-              feedbackElement.innerText = "למטה 👇";
+        // --- לוגיקת התחברות ---
+        window.handleLogin = async () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const msg = document.getElementById('login-msg');
+            
+            msg.innerText = "מתחבר...";
+            
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (error) {
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                    try {
+                        msg.innerText = "משתמש חדש? יוצר חשבון...";
+                        await createUserWithEmailAndPassword(auth, email, pass);
+                    } catch (createError) {
+                        msg.innerText = "שגיאה ביצירה: " + createError.message;
+                    }
+                } else {
+                    msg.innerText = "שגיאה: " + error.message;
+                }
             }
-            if (angle < 30 && stage === "down") {
-              stage = "up";
-              counter += 1;
-              countElement.innerText = counter;
-              feedbackElement.innerText = "למעלה! 👆";
+        };
+
+        window.handleLogout = () => {
+            signOut(auth).then(() => window.location.reload());
+        };
+
+        // --- האזנה לשינויי מצב (המעבר בין המסכים) ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('workout-screen').style.display = 'block';
+                document.getElementById('user-email').innerText = user.email;
+                startCamera(); // התחלת המצלמה רק כשיש משתמש
+            } else {
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('workout-screen').style.display = 'none';
             }
+        });
 
-            // הצגת הזווית ליד המרפק (לדיבוג)
-            canvasCtx.fillStyle = "white";
-            canvasCtx.font = "20px Arial";
-            canvasCtx.fillText(
-              Math.round(angle),
-              elbow.x * canvasElement.width,
-              elbow.y * canvasElement.height
-            );
-          }
+        // --- לוגיקת MediaPipe וספירה ---
+        let counter = 0;
+        let stage = "down";
+
+        // פונקציית שמירה (מקושרת לכפתור)
+        window.saveData = async () => {
+            if(!currentUser) return alert("אינך מחובר!");
+            
+            const serverUrl = "https://my-ai-app-latest.onrender.com/save_workout";
+            
+            try {
+                const btn = document.querySelector('button.success');
+                const originalText = btn.innerText;
+                btn.innerText = "שולח...";
+                
+                const response = await fetch(serverUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        reps: counter,
+                        user_email: currentUser.email
+                    })
+                });
+                
+                if(response.ok) {
+                    alert("✅ האימון נשמר בהצלחה!");
+                } else {
+                    alert("❌ שגיאה בשמירה בשרת");
+                }
+                btn.innerText = originalText;
+                
+            } catch (e) { 
+                console.error(e);
+                alert("❌ לא ניתן להתחבר לשרת");
+            }
+        };
+
+        function calculateAngle(a, b, c) {
+            let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+            let angle = Math.abs(radians * 180.0 / Math.PI);
+            if (angle > 180.0) angle = 360 - angle;
+            return angle;
         }
-        canvasCtx.restore();
-      }
 
-      const pose = new Pose({
-        locateFile: (file) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-        },
-      });
+        function onResults(results) {
+            const canvasElement = document.getElementById('output_canvas');
+            const canvasCtx = canvasElement.getContext('2d');
+            const feedback = document.getElementById('feedback');
+            const counterEl = document.getElementById('counter');
 
-      pose.setOptions({
-        modelComplexity: 1,
-        smoothLandmarks: true,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // ציור תמונת המצלמה
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-      pose.onResults(onResults);
+            if (results.poseLandmarks) {
+                // ציור השלד
+                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+                             {color: '#00FF00', lineWidth: 4});
+                drawLandmarks(canvasCtx, results.poseLandmarks,
+                            {color: '#FF0000', lineWidth: 2});
 
-      const camera = new Camera(videoElement, {
-        onFrame: async () => {
-          await pose.send({ image: videoElement });
-        },
-        width: 640,
-        height: 480,
-      });
-      camera.start();
+                // לוגיקת ספירה (יד שמאל: 11=כתף, 13=מרפק, 15=שורש כף יד)
+                const shoulder = results.poseLandmarks[11];
+                const elbow = results.poseLandmarks[13];
+                const wrist = results.poseLandmarks[15];
 
-      async function saveData() {
-        const serverUrl = "https://my-ai-app-latest.onrender.com/save_workout"; // <--- הכתובת שלך מ-Render
-
-        try {
-          alert("שולח נתונים לענן... ☁️");
-
-          const response = await fetch(serverUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ reps: counter }),
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            alert(
-              `נשמר בהצלחה! 🎉\nמספר חזרות: ${result.reps}\nזמן: ${result.timestamp}`
-            );
-          } else {
-            alert("שגיאה בשמירה 😞");
-          }
-        } catch (error) {
-          console.error(error);
-          alert("לא הצלחתי להתחבר לשרת.");
+                if (shoulder && elbow && wrist) {
+                    const angle = calculateAngle(shoulder, elbow, wrist);
+                    
+                    if (angle > 160) {
+                        stage = "down";
+                        feedback.innerText = "למטה 👇";
+                        feedback.style.color = "white";
+                    }
+                    if (angle < 30 && stage === "down") {
+                        stage = "up";
+                        counter++;
+                        counterEl.innerText = counter;
+                        feedback.innerText = "מעולה! 👆";
+                        feedback.style.color = "#00FF00";
+                    }
+                    
+                    // הצגת הזווית לדיבוג
+                    canvasCtx.fillStyle = "yellow";
+                    canvasCtx.font = "24px Arial";
+                    canvasCtx.fillText(Math.round(angle), elbow.x * canvasElement.width, elbow.y * canvasElement.height);
+                }
+            }
+            canvasCtx.restore();
         }
-      }
+
+        // הגדרת MediaPipe Pose
+        const pose = new Pose({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+        }});
+
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        pose.onResults(onResults);
+
+        // פונקציה להתחלת המצלמה (נקראת רק אחרי התחברות)
+        function startCamera() {
+            const videoElement = document.getElementById('input_video');
+            const camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await pose.send({image: videoElement});
+                },
+                width: 640,
+                height: 480
+            });
+            camera.start();
+        }
     </script>
-  </body>
+</body>
 </html>

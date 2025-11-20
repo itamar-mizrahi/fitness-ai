@@ -1,0 +1,31 @@
+# FastAPI Backend Dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.25.0
+python-multipart==0.0.6
+
+# Database
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# ML & Computer Vision
+tensorflow==2.15.0
+opencv-python==4.9.0.80
+numpy==1.26.3
+pandas==2.1.4
+scikit-learn==1.4.0
+scipy==1.11.4
+
+# Firebase Admin
+firebase-admin==6.3.0
+
+# Data Processing
+pydantic==2.5.3
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+
+# Utilities
+pytest==7.4.4
+pytest-asyncio==0.23.3
+httpx==0.26.0

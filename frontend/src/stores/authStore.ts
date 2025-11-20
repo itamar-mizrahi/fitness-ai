@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { 
-  getAuth, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   signOut,
@@ -8,7 +7,7 @@ import {
   User as FirebaseUser
 } from 'firebase/auth'
 import { auth } from '../config/firebase'
-import type { User, UserRole } from '../../../shared/types'
+import { User, UserRole } from '../../../shared/types'
 
 interface AuthState {
   user: User | null
@@ -20,6 +19,7 @@ interface AuthState {
   register: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   setUser: (user: User | null) => void
+  setLoading: (loading: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -61,23 +61,27 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user: User | null) => {
     set({ user, loading: false })
   },
+  
+  setLoading: (loading: boolean) => {
+    set({ loading })
+  },
 }))
 
-// Listen to auth state changes
-onAuthStateChanged(auth, async (firebaseUser) => {
-  if (firebaseUser) {
-    // Fetch user data from backend
-    // For now, create a basic user object
-    const user: User = {
-      id: firebaseUser.uid,
-      email: firebaseUser.email!,
-      role: UserRole.PATIENT, // Default role, should be fetched from backend
-      createdAt: new Date(),
-      updatedAt: new Date(),
+// Initialize auth listener
+export const initAuthListener = () => {
+  onAuthStateChanged(auth, async (firebaseUser) => {
+    if (firebaseUser) {
+      const user: User = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email!,
+        role: UserRole.PATIENT,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      
+      useAuthStore.getState().setUser(user)
+    } else {
+      useAuthStore.getState().setUser(null)
     }
-    
-    useAuthStore.getState().setUser(user)
-  } else {
-    useAuthStore.getState().setUser(null)
-  }
-})
+  })
+}

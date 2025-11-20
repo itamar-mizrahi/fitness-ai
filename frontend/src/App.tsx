@@ -1,16 +1,22 @@
+import { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from './stores/authStore'
+import { useAuthStore, initAuthListener } from './stores/authStore'
 
-// Pages (will be created)
+// Pages
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import WorkoutSession from './pages/WorkoutSession'
+import Dashboard from './pages/DashboardPlaceholder'
+import WorkoutSession from './pages/WorkoutSessionPlaceholder'
 import TremorAnalysis from './pages/TremorAnalysis'
-import PatientManagement from './pages/PatientManagement'
-import Analytics from './pages/Analytics'
+import PatientManagement from './pages/PatientManagementPlaceholder'
+import Analytics from './pages/AnalyticsPlaceholder'
 
 function App() {
     const { user, loading } = useAuthStore()
+
+    useEffect(() => {
+        // Initialize Firebase auth listener
+        initAuthListener()
+    }, [])
 
     if (loading) {
         return <div className="loading-screen">Loading...</div>

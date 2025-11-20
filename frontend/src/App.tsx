@@ -5,7 +5,7 @@ import { useAuthStore, initAuthListener } from './stores/authStore'
 // Pages
 import Login from './pages/Login'
 import Dashboard from './pages/DashboardPlaceholder'
-import WorkoutSession from './pages/WorkoutSessionPlaceholder'
+import WorkoutSession from './pages/WorkoutSession'
 import TremorAnalysis from './pages/TremorAnalysis'
 import PatientManagement from './pages/PatientManagementPlaceholder'
 import Analytics from './pages/AnalyticsPlaceholder'

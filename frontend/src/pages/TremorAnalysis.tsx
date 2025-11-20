@@ -14,11 +14,14 @@ const TremorAnalysis = () => {
     const [currentMeasurement, setCurrentMeasurement] = useState<TremorMeasurement | null>(null)
     const [measurements, setMeasurements] = useState<TremorMeasurement[]>([])
     const [bufferProgress, setBufferProgress] = useState(0)
+    const [error, setError] = useState<string | null>(null)
+    const [cameraReady, setCameraReady] = useState(false)
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const poseDetectorRef = useRef<PoseDetector | null>(null)
     const tremorDetectorRef = useRef<TremorDetector | null>(null)
+    const analyzeIntervalRef = useRef<number | null>(null)
 
     useEffect(() => {
         // Initialize detectors
@@ -36,15 +39,21 @@ const TremorAnalysis = () => {
         })
 
         return () => {
+            stopAnalysis()
             poseDetectorRef.current?.destroy()
         }
     }, [])
 
     const startAnalysis = async () => {
-        if (!videoRef.current || !poseDetectorRef.current) return
+        if (!videoRef.current || !poseDetectorRef.current || !tremorDetectorRef.current) return
 
         try {
+            setError(null)
+            setCameraReady(false)
+
+            // Start pose detector
             await poseDetectorRef.current.start(videoRef.current)
+            setCameraReady(true)
 
             // Subscribe to pose results
             poseDetectorRef.current.onResults((results) => {
@@ -56,17 +65,19 @@ const TremorAnalysis = () => {
                         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
 
                         // Draw video frame
-                        ctx.drawImage(
-                            videoRef.current!,
-                            0,
-                            0,
-                            canvasRef.current.width,
-                            canvasRef.current.height
-                        )
+                        if (videoRef.current) {
+                            ctx.drawImage(
+                                videoRef.current,
+                                0,
+                                0,
+                                canvasRef.current.width,
+                                canvasRef.current.height
+                            )
+                        }
 
                         // Draw pose landmarks
                         if (results.landmarks.length > 0) {
-                            const landmarksForDrawing = results.landmarks.map((lm) => ({
+                            const landmarksForDrawing = results.landmarks.map((lm: any) => ({
                                 x: lm.x,
                                 y: lm.y,
                                 z: lm.z,
@@ -99,32 +110,52 @@ const TremorAnalysis = () => {
                     const progress =
                         (tremorDetectorRef.current.getBufferSize() / 90) * 100
                     setBufferProgress(Math.min(progress, 100))
-
-                    // Analyze tremor when ready
-                    if (tremorDetectorRef.current.isReady()) {
-                        const measurement = tremorDetectorRef.current.analyzeTremor(
-                            selectedBodyPart,
-                            'current-user' // Replace with actual user ID
-                        )
-
-                        if (measurement) {
-                            setCurrentMeasurement(measurement)
-                        }
-                    }
                 }
             })
 
+            // Set up interval to analyze tremor
+            analyzeIntervalRef.current = window.setInterval(() => {
+                if (tremorDetectorRef.current && tremorDetectorRef.current.isReady()) {
+                    const measurement = tremorDetectorRef.current.analyzeTremor(
+                        selectedBodyPart,
+                        'current-user' // Replace with actual user ID
+                    )
+
+                    if (measurement) {
+                        setCurrentMeasurement(measurement)
+                    }
+                }
+            }, 500) // Analyze every 500ms
+
             setIsActive(true)
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to start analysis:', error)
-            alert('שגיאה בהפעלת המצלמה')
+            let errorMessage = 'שגיאה בהפעלת המצלמה'
+
+            if (error.name === 'NotAllowedError') {
+                errorMessage = 'יש לאפשר גישה למצלמה כדי להשתמש בכלי זה'
+            } else if (error.name === 'NotFoundError') {
+                errorMessage = 'לא נמצאה מצלמה במכשיר'
+            } else if (error.message) {
+                errorMessage = error.message
+            }
+
+            setError(errorMessage)
         }
     }
 
     const stopAnalysis = () => {
+        if (analyzeIntervalRef.current) {
+            clearInterval(analyzeIntervalRef.current)
+            analyzeIntervalRef.current = null
+        }
+
         poseDetectorRef.current?.stop()
+        tremorDetectorRef.current?.reset()
+
         setIsActive(false)
         setBufferProgress(0)
+        setCameraReady(false)
     }
 
     const saveMeasurement = () => {
@@ -226,6 +257,21 @@ const TremorAnalysis = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Error Display */}
+                    {error && (
+                        <div className="error-banner">
+                            ⚠️ {error}
+                        </div>
+                    )}
+
+                    {/* Camera Status */}
+                    {isActive && cameraReady && (
+                        <div className="camera-status">
+                            <span className="status-dot"></span>
+                            <span>מצלמה פעילה</span>
+                        </div>
+                    )}
 
                     {/* Controls */}
                     <div className="controls">

@@ -5,13 +5,16 @@
  * Supports multiple exercise types.
  */
 
-import type { Landmark, ExerciseType } from '../../../../shared/types'
+import type { Landmark, ExerciseType } from '../../../shared/types'
 import { PoseDetector } from './PoseDetector'
 
 interface RepState {
   count: number
   stage: 'up' | 'down' | 'neutral'
   lastAngle: number
+  lastRepTime: number
+  stateHoldFrames: number
+  baselineHipHeight?: number // For squat: track initial standing position
 }
 
 export class ExerciseCounter {
@@ -19,6 +22,21 @@ export class ExerciseCounter {
     count: 0,
     stage: 'neutral',
     lastAngle: 0,
+    lastRepTime: 0,
+    stateHoldFrames: 0,
+    baselineHipHeight: undefined,
+  }
+
+  private readonly MIN_VISIBILITY = 0.65
+  private readonly MIN_REP_INTERVAL = 800 // ms (minimum time between reps)
+  private readonly STATE_HOLD_THRESHOLD = 2 // frames (must hold position for X frames)
+  private readonly MIN_HIP_DROP = 0.08 // Minimum hip vertical displacement for valid squat (8% of frame height)
+
+  /**
+   * Helper to check if landmarks are visible
+   */
+  private areLandmarksVisible(landmarks: Landmark[]): boolean {
+    return landmarks.every(l => l && (l.visibility === undefined || l.visibility > this.MIN_VISIBILITY))
   }
 
   /**
@@ -57,11 +75,11 @@ export class ExerciseCounter {
     const elbow = landmarks[13]
     const wrist = landmarks[15]
 
-    if (!shoulder || !elbow || !wrist) {
+    if (!this.areLandmarksVisible([shoulder, elbow, wrist])) {
       return {
         count: this.repState.count,
         stage: this.repState.stage,
-        feedback: 'לא מזהה זרוע',
+        feedback: 'לא מזהה זרוע (התרחק מהמצלמה)',
       }
     }
 
@@ -73,11 +91,27 @@ export class ExerciseCounter {
     // Down position (arm extended)
     if (angle > 160) {
       if (this.repState.stage === 'up') {
-        // Complete rep
-        this.repState.count++
-        feedback = 'מעולה! 👍'
+        // Check debounce
+        const now = Date.now()
+        if (now - this.repState.lastRepTime > this.MIN_REP_INTERVAL) {
+          this.repState.stateHoldFrames++
+
+          if (this.repState.stateHoldFrames >= this.STATE_HOLD_THRESHOLD) {
+            this.repState.count++
+            this.repState.stage = 'down'
+            this.repState.lastRepTime = now
+            this.repState.stateHoldFrames = 0
+            feedback = 'מעולה! 👍'
+          }
+        }
+      } else {
+        this.repState.stage = 'down'
       }
-      this.repState.stage = 'down'
+    } else {
+      // Reset hold counter if condition lost
+      if (this.repState.stage === 'up') {
+        this.repState.stateHoldFrames = 0
+      }
     }
 
     // Up position (arm contracted)
@@ -103,39 +137,72 @@ export class ExerciseCounter {
     const knee = landmarks[25]
     const ankle = landmarks[27]
 
-    if (!hip || !knee || !ankle) {
+    if (!this.areLandmarksVisible([hip, knee, ankle])) {
       return {
         count: this.repState.count,
         stage: this.repState.stage,
-        feedback: 'לא מזהה רגליים',
+        feedback: 'לא מזהה רגליים (התרחק מהמצלמה)',
       }
     }
 
     const angle = PoseDetector.calculateAngle(hip, knee, ankle)
     this.repState.lastAngle = angle
 
+    // Track baseline hip height when standing
+    if (this.repState.baselineHipHeight === undefined && angle > 160) {
+      this.repState.baselineHipHeight = hip.y
+    }
+
     let feedback = ''
 
-    // Down position (knees bent)
-    if (angle < 90) {
-      if (this.repState.stage === 'neutral' || this.repState.stage === 'up') {
+    // Down position (knees bent) - Relaxed to 100 degrees for rehab
+    // AND hip must drop significantly from baseline
+    const hipDrop = this.repState.baselineHipHeight !== undefined 
+      ? hip.y - this.repState.baselineHipHeight 
+      : 0
+    
+    if (angle < 100 && hipDrop > this.MIN_HIP_DROP) {
+      if (this.repState.stage === 'up' || this.repState.stage === 'neutral') {
         this.repState.stage = 'down'
-        feedback = 'טוב! עכשיו קום 👆'
+        feedback = 'מצוין! עכשיו קום 👆'
       }
     }
 
-    // Up position (knees extended)
-    if (angle > 160 && this.repState.stage === 'down') {
-      this.repState.count++
-      this.repState.stage = 'up'
-      feedback = 'מעולה! תרד שוב 👇'
+    // Up position (knees extended AND hip returned to baseline)
+    const isStandingUpright = angle > 160 && Math.abs(hipDrop) < 0.05
+
+    if (isStandingUpright) {
+      if (this.repState.stage === 'down') {
+        // Check debounce
+        const now = Date.now()
+        if (now - this.repState.lastRepTime > this.MIN_REP_INTERVAL) {
+          this.repState.stateHoldFrames++
+
+          if (this.repState.stateHoldFrames >= this.STATE_HOLD_THRESHOLD) {
+            this.repState.count++
+            this.repState.stage = 'up'
+            this.repState.lastRepTime = now
+            this.repState.stateHoldFrames = 0
+            // Reset baseline for next rep
+            this.repState.baselineHipHeight = hip.y
+            feedback = 'מעולה! תרד שוב 👇'
+          }
+        }
+      } else if (this.repState.stage === 'neutral') {
+        this.repState.stage = 'up'
+      }
+    } else {
+      // Reset hold counter if condition lost
+      if (this.repState.stage === 'down') {
+        this.repState.stateHoldFrames = 0
+      }
     }
 
     return {
       count: this.repState.count,
       stage: this.repState.stage === 'down' ? 'למטה' : 'למעלה',
       angle: Math.round(angle),
-      feedback: feedback || (angle > 160 ? 'תרד למטה 👇' : 'המשך למעלה 👆'),
+      feedback: feedback || (this.repState.stage === 'down' ? 'קום למעלה 👆' : 'תרד למטה 👇'),
     }
   }
 
@@ -148,36 +215,63 @@ export class ExerciseCounter {
     const elbow = landmarks[13]
     const wrist = landmarks[15]
 
-    if (!shoulder || !elbow || !wrist) {
+    if (!this.areLandmarksVisible([shoulder, elbow, wrist])) {
       return {
         count: this.repState.count,
         stage: this.repState.stage,
-        feedback: 'לא מזהה זרוע',
+        feedback: 'לא מזהה זרוע (התרחק מהמצלמה)',
       }
     }
 
-    // Calculate vertical angle (elbow height relative to shoulder)
-    const elbowHeight = elbow.y - shoulder.y
-    const wristHeight = wrist.y - elbow.y
+    // Calculate elbow angle
+    const angle = PoseDetector.calculateAngle(shoulder, elbow, wrist)
+    this.repState.lastAngle = angle
 
     let feedback = ''
 
-    // Down position (elbow below shoulder)
-    if (elbowHeight > 0.1) {
-      this.repState.stage = 'down'
+    // Down position (arms bent, hands near shoulders)
+    // Angle should be acute (< 90)
+    if (angle < 90) {
+      if (this.repState.stage === 'up' || this.repState.stage === 'neutral') {
+        this.repState.stage = 'down'
+        feedback = 'מוכן! דחוף למעלה 👆'
+      }
     }
 
-    // Up position (wrist above elbow)
-    if (wristHeight < -0.1 && this.repState.stage === 'down') {
-      this.repState.count++
-      this.repState.stage = 'up'
-      feedback = 'מעולה! 🎯'
+    // Up position (arms extended overhead)
+    // Angle should be obtuse (> 150) AND wrists must be ABOVE shoulders
+    const isArmsOverhead = wrist.y < shoulder.y // y is smaller when higher
+    
+    if (angle > 150 && isArmsOverhead) {
+      if (this.repState.stage === 'down') {
+        // Check debounce
+        const now = Date.now()
+        if (now - this.repState.lastRepTime > this.MIN_REP_INTERVAL) {
+          this.repState.stateHoldFrames++
+          
+          if (this.repState.stateHoldFrames >= this.STATE_HOLD_THRESHOLD) {
+            this.repState.count++
+            this.repState.stage = 'up'
+            this.repState.lastRepTime = now
+            this.repState.stateHoldFrames = 0
+            feedback = 'מעולה! 🎯'
+          }
+        }
+      } else if (this.repState.stage === 'neutral') {
+        this.repState.stage = 'up'
+      }
+    } else {
+      // Reset hold counter if condition lost
+      if (this.repState.stage === 'down') {
+        this.repState.stateHoldFrames = 0
+      }
     }
 
     return {
       count: this.repState.count,
       stage: this.repState.stage === 'down' ? 'למטה' : 'למעלה',
-      feedback: feedback || (this.repState.stage === 'down' ? 'לחץ למעלה 👆' : 'תוריד למטה 👇'),
+      angle: Math.round(angle),
+      feedback: feedback || (this.repState.stage === 'down' ? 'דחוף למעלה 👆' : 'תוריד למטה 👇'),
     }
   }
 
@@ -189,6 +283,9 @@ export class ExerciseCounter {
       count: 0,
       stage: 'neutral',
       lastAngle: 0,
+      lastRepTime: 0,
+      stateHoldFrames: 0,
+      baselineHipHeight: undefined,
     }
   }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { FormAnalyzer } from './FormAnalyzer'
+import FormAnalyzer from './FormAnalyzer'
 import { ExerciseType } from '../../../shared/types'
 import type { Landmark } from '../../../shared/types'
 
@@ -48,7 +48,6 @@ describe('FormAnalyzer', () => {
 
   describe('Squat Analysis', () => {
     it('should detect knee valgus', () => {
-      // Mock landmarks for knee valgus (knees closer than ankles)
       const landmarks = Array(33).fill({ x: 0, y: 0, z: 0, visibility: 0 })
       
       // Left leg
@@ -60,13 +59,14 @@ describe('FormAnalyzer', () => {
       landmarks[24] = { x: 0.6, y: 0.5, z: 0, visibility: 1 } // Hip
       landmarks[26] = { x: 0.55, y: 0.7, z: 0, visibility: 1 } // Knee (caving in)
       landmarks[28] = { x: 0.6, y: 0.9, z: 0, visibility: 1 } // Ankle
+      landmarks[11] = { x: 0.5, y: 0.2, z: 0, visibility: 1 } // Shoulder (needed for lean check)
 
       const result = analyzer.analyze(landmarks, ExerciseType.SQUAT)
       
       expect(result).not.toBeNull()
-      expect(result?.isValid).toBe(false)
-      expect(result?.message).toContain('ברכיים')
+      expect(result?.issue).toBe('knee_valgus')
       expect(result?.severity).toBe('danger')
+      expect(result?.bodyPart).toBe('legs')
     })
   })
 })

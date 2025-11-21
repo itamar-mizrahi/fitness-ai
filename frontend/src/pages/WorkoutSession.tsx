@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { PoseDetector } from '../services/PoseDetector'
 import { ExerciseCounter } from '../services/ExerciseCounter'
-import { FormAnalyzer, type FormFeedback } from '../services/FormAnalyzer'
+import FormAnalyzer, { type FormFeedback } from '../services/FormAnalyzer'
 import { AudioFeedback } from '../services/AudioFeedback'
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils'
 import { POSE_CONNECTIONS } from '@mediapipe/pose'

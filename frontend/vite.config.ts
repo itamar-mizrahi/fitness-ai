@@ -3,9 +3,9 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: '/fitness-ai/', // GitHub Pages base path
+  base: command === 'build' ? '/fitness-ai/' : '/', // Only use /fitness-ai/ for production build
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -24,4 +24,4 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
-})
+}))

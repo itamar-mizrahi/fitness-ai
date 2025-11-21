@@ -22,8 +22,11 @@ function App() {
         return <div className="loading-screen">Loading...</div>
     }
 
+    // Use /fitness-ai/ basename for GitHub Pages, / for local dev
+    const basename = window.location.hostname.includes('github.io') ? '/fitness-ai' : '/'
+
     return (
-        <Router basename={import.meta.env.BASE_URL}>
+        <Router basename={basename}>
             <Routes>
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
 

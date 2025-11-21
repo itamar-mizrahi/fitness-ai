@@ -7,7 +7,7 @@
 
 import { Pose, Results } from '@mediapipe/pose'
 import { Camera } from '@mediapipe/camera_utils'
-import type { Landmark, PoseResults, ExerciseType } from '../../../../shared/types'
+import type { Landmark, PoseResults } from '../../../shared/types'
 
 export interface PoseDetectorConfig {
   modelComplexity?: 0 | 1 | 2

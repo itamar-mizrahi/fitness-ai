@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import FormAnalyzer from './FormAnalyzer'
 import { ExerciseType } from '../../../shared/types'
-import type { Landmark } from '../../../shared/types'
+
 
 describe('FormAnalyzer', () => {
   let analyzer: FormAnalyzer

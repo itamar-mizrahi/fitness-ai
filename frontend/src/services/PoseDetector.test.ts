@@ -24,7 +24,7 @@ const mockCameraStop = vi.fn()
 
 vi.mock('@mediapipe/camera_utils', () => {
   return {
-    Camera: vi.fn().mockImplementation((video, options) => {
+    Camera: vi.fn().mockImplementation((_video, options) => {
       // Store callback to trigger it manually if needed
       if (options && options.onFrame) {
         // options.onFrame() 

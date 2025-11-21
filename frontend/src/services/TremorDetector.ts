@@ -5,7 +5,7 @@
  * Used for monitoring Parkinson's disease and other movement disorders.
  */
 
-import type { Landmark, TremorMeasurement } from '../../../../shared/types'
+import type { Landmark, TremorMeasurement } from '../../../shared/types'
 
 interface TremorConfig {
   windowSize: number // Number of frames to analyze
@@ -189,7 +189,7 @@ export class TremorDetector {
 
     // Simple linear detrending
     const n = positions.length
-    const xs = positions.map((_, i) => i)
+
     
     // Detrend X
     const meanX = positions.reduce((sum, p) => sum + p.x, 0) / n
@@ -219,7 +219,7 @@ export class TremorDetector {
    */
   private classifySeverity(
     amplitude: number,
-    frequency: number
+    _frequency: number
   ): 'mild' | 'moderate' | 'severe' {
     if (amplitude > 20) return 'severe'
     if (amplitude > 10) return 'moderate'
@@ -236,7 +236,7 @@ export class TremorDetector {
    * 3 = Moderate; amplitude 10-20 pixels
    * 4 = Severe; amplitude > 20 pixels
    */
-  private calculateUPDRSScore(amplitude: number, frequency: number): number {
+  private calculateUPDRSScore(amplitude: number, _frequency: number): number {
     if (amplitude < this.config.minAmplitudeThreshold) return 0
     if (amplitude < 5) return 1
     if (amplitude < 10) return 2

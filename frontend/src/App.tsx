@@ -23,7 +23,7 @@ function App() {
     }
 
     return (
-        <Router basename="/fitness-ai">
+        <Router basename={import.meta.env.BASE_URL}>
             <Routes>
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
 

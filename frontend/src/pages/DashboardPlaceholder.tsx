@@ -1,4 +1,5 @@
 import { useAuthStore } from '../stores/authStore'
+import { Link } from 'react-router-dom'
 
 const DashboardPlaceholder = () => {
     const { user, logout } = useAuthStore()
@@ -17,25 +18,25 @@ const DashboardPlaceholder = () => {
                     <div className="card">
                         <h3>🏋️ אימונים</h3>
                         <p>מעקב אחר האימונים שלך</p>
-                        <a href="/workout" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
+                        <Link to="/workout" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
                             התחל אימון
-                        </a>
+                        </Link>
                     </div>
 
                     <div className="card">
                         <h3>🧠 ניתוח רעידות</h3>
                         <p>ניטור רעידות ופרקינסון</p>
-                        <a href="/tremor" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
+                        <Link to="/tremor" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
                             התחל ניתוח
-                        </a>
+                        </Link>
                     </div>
 
                     <div className="card">
                         <h3>📈 סטטיסטיקות</h3>
                         <p>צפייה בהתקדמות</p>
-                        <a href="/analytics" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
+                        <Link to="/analytics" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
                             צפה בנתונים
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>

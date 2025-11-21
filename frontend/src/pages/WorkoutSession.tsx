@@ -7,8 +7,11 @@ import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils'
 import { POSE_CONNECTIONS } from '@mediapipe/pose'
 import { ExerciseType } from '../../../shared/types'
 import './WorkoutSession.css'
+import { useAuthStore } from '../stores/authStore'
+import { WorkoutService } from '../services/WorkoutService'
 
 const WorkoutSession = () => {
+    const { user } = useAuthStore()
     const [isActive, setIsActive] = useState(false)
     const [selectedExercise, setSelectedExercise] = useState<ExerciseType>(ExerciseType.BICEP_CURL)
     const [reps, setReps] = useState(0)
@@ -178,18 +181,30 @@ const WorkoutSession = () => {
         }
     }
 
-    const saveWorkout = () => {
-        const workoutData = {
-            exercise: selectedExercise,
-            sets: sets,
-            totalReps: reps,
-            date: new Date().toISOString(),
-            clinicalMode: clinicalMode
+    const saveWorkout = async () => {
+        if (!user) {
+            alert('עליך להתחבר כדי לשמור אימון')
+            return
         }
 
-        console.log('Saving workout:', workoutData)
-        // TODO: Save to backend
-        alert(`✅ האימון נשמר!\n${sets} סטים, סה"כ חזרות: ${reps}`)
+        const workoutData = {
+            userId: user.id,
+            exerciseType: selectedExercise,
+            reps: reps + (sets * 10), // Approximate total reps if sets tracked differently
+            duration: 0, // TODO: Track duration
+            accuracy: 85, // TODO: Calculate real accuracy
+            timestamp: Date.now(),
+            caloriesBurned: reps * 0.5 // Rough estimate
+        }
+
+        try {
+            console.log('Saving workout:', workoutData)
+            await WorkoutService.saveSession(workoutData)
+            alert(`✅ האימון נשמר בהצלחה!\n${sets} סטים, סה"כ חזרות: ${reps}`)
+        } catch (error) {
+            console.error('Error saving workout:', error)
+            alert('❌ שגיאה בשמירת האימון')
+        }
     }
 
     const getExerciseName = (exercise: ExerciseType): string => {

@@ -3,6 +3,8 @@ import { MockDataService } from '../services/MockDataService'
 import { RepsChart, TremorChart, QualityRadar } from '../components/DashboardCharts'
 import type { ExerciseSession, TremorMeasurement, ExerciseQuality } from '../../../shared/types'
 import './AnalyticsDashboard.css'
+import { useAuthStore } from '../stores/authStore'
+import { WorkoutService, type WorkoutSessionData } from '../services/WorkoutService'
 
 const AnalyticsDashboard = () => {
     const [activeTab, setActiveTab] = useState<'overview' | 'tremor' | 'quality'>('overview')
@@ -10,12 +12,48 @@ const AnalyticsDashboard = () => {
     const [tremorData, setTremorData] = useState<TremorMeasurement[]>([])
     const [qualityData, setQualityData] = useState<ExerciseQuality | null>(null)
 
+    // ... (inside component)
+    const { user } = useAuthStore()
+    const [loading, setLoading] = useState(true)
+
     useEffect(() => {
-        // Load mock data
-        setSessions(MockDataService.getWorkoutHistory())
-        setTremorData(MockDataService.getTremorHistory())
-        setQualityData(MockDataService.getCurrentQuality())
-    }, [])
+        const loadData = async () => {
+            if (user) {
+                try {
+                    setLoading(true)
+                    const userSessions = await WorkoutService.getUserSessions(user.id)
+
+                    const formattedSessions: ExerciseSession[] = userSessions.map((s: WorkoutSessionData & { id: string }) => ({
+                        id: s.id,
+                        userId: s.userId,
+                        exerciseType: s.exerciseType as any,
+                        startTime: new Date(s.timestamp),
+                        endTime: new Date(s.timestamp + (s.duration * 1000)),
+                        reps: s.reps,
+                        quality_score: s.accuracy
+                    }))
+
+                    setSessions(formattedSessions)
+
+                    // Keep mock data for tremor/quality for now as we don't save them yet
+                    setTremorData(MockDataService.getTremorHistory())
+                    setQualityData(MockDataService.getCurrentQuality())
+                } catch (error) {
+                    console.error('Error loading analytics:', error)
+                } finally {
+                    setLoading(false)
+                }
+            } else {
+                // Fallback to mock data if not logged in
+                setSessions(MockDataService.getWorkoutHistory())
+                setTremorData(MockDataService.getTremorHistory())
+                setQualityData(MockDataService.getCurrentQuality())
+                setLoading(false)
+            }
+        }
+
+        loadData()
+    }, [user])
 
     const totalReps = sessions.reduce((acc, curr) => acc + curr.reps, 0)
     const avgQuality = Math.round(

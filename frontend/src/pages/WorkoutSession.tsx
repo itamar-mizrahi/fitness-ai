@@ -201,9 +201,9 @@ const WorkoutSession = () => {
             console.log('Saving workout:', workoutData)
             await WorkoutService.saveSession(workoutData)
             alert(`✅ האימון נשמר בהצלחה!\n${sets} סטים, סה"כ חזרות: ${reps}`)
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving workout:', error)
-            alert('❌ שגיאה בשמירת האימון')
+            alert(`❌ שגיאה בשמירת האימון: ${error.message || 'שגיאה לא ידועה'}`)
         }
     }
 

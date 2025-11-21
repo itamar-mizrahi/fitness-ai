@@ -15,14 +15,17 @@ const AnalyticsDashboard = () => {
     // ... (inside component)
     const { user } = useAuthStore()
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         const loadData = async () => {
             if (user) {
                 try {
                     setLoading(true)
+                    setError(null)
                     const userSessions = await WorkoutService.getUserSessions(user.id)
 
+                    // Convert to ExerciseSession format
                     const formattedSessions: ExerciseSession[] = userSessions.map((s: WorkoutSessionData & { id: string }) => ({
                         id: s.id,
                         userId: s.userId,
@@ -38,8 +41,9 @@ const AnalyticsDashboard = () => {
                     // Keep mock data for tremor/quality for now as we don't save them yet
                     setTremorData(MockDataService.getTremorHistory())
                     setQualityData(MockDataService.getCurrentQuality())
-                } catch (error) {
+                } catch (error: any) {
                     console.error('Error loading analytics:', error)
+                    setError(error.message || 'שגיאה בטעינת הנתונים')
                 } finally {
                     setLoading(false)
                 }
@@ -65,6 +69,25 @@ const AnalyticsDashboard = () => {
             <header className="analytics-header">
                 <h1>📊 לוח בקרה וניתוח נתונים</h1>
                 <p>מעקב אחר התקדמות שיקום, רעד ואיכות ביצוע</p>
+                {error && (
+                    <div style={{
+                        backgroundColor: '#fee2e2',
+                        border: '1px solid #ef4444',
+                        color: '#b91c1c',
+                        padding: '1rem',
+                        borderRadius: '0.5rem',
+                        marginTop: '1rem',
+                        direction: 'ltr'
+                    }}>
+                        <strong>Error:</strong> {error}
+                        {error.includes('index') && (
+                            <p>
+                                <br />
+                                Please check the browser console (F12) for a link to create the required index.
+                            </p>
+                        )}
+                    </div>
+                )}
             </header>
 
             <div className="dashboard-tabs">

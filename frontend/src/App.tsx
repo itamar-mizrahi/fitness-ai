@@ -8,7 +8,7 @@ import Dashboard from './pages/DashboardPlaceholder'
 import WorkoutSession from './pages/WorkoutSession'
 import TremorAnalysis from './pages/TremorAnalysis'
 import PatientManagement from './pages/PatientManagementPlaceholder'
-import Analytics from './pages/AnalyticsPlaceholder'
+import AnalyticsDashboard from './pages/AnalyticsDashboard'
 
 function App() {
     const { user, loading } = useAuthStore()
@@ -32,7 +32,7 @@ function App() {
                 <Route path="/workout" element={user ? <WorkoutSession /> : <Navigate to="/login" />} />
                 <Route path="/tremor" element={user ? <TremorAnalysis /> : <Navigate to="/login" />} />
                 <Route path="/patients" element={user ? <PatientManagement /> : <Navigate to="/login" />} />
-                <Route path="/analytics" element={user ? <Analytics /> : <Navigate to="/login" />} />
+                <Route path="/analytics" element={user ? <AnalyticsDashboard /> : <Navigate to="/login" />} />
 
                 <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
             </Routes>

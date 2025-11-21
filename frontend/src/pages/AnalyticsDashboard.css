@@ -1,0 +1,114 @@
+.analytics-container {
+  padding: var(--spacing-xl);
+  background: #f3f4f6;
+  min-height: 100vh;
+}
+
+.analytics-header {
+  margin-bottom: var(--spacing-xl);
+}
+
+.analytics-header h1 {
+  font-size: 2rem;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-xs);
+}
+
+.analytics-header p {
+  color: var(--gray-600);
+}
+
+.dashboard-tabs {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+  border-bottom: 1px solid var(--gray-200);
+  padding-bottom: var(--spacing-sm);
+}
+
+.tab-btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  background: none;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--primary-600);
+}
+
+.tab-btn.active {
+  color: var(--primary-600);
+  font-weight: 600;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -9px; /* Adjust based on padding-bottom of container */
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--primary-600);
+}
+
+.dashboard-content {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--spacing-xl);
+}
+
+.chart-card {
+  background: white;
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-100);
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.summary-card {
+  background: white;
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100);
+}
+
+.summary-card h3 {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-xs);
+}
+
+.summary-card .value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.summary-card .trend {
+  font-size: 0.875rem;
+  margin-top: var(--spacing-xs);
+}
+
+.trend.positive { color: #10b981; }
+.trend.negative { color: #ef4444; }

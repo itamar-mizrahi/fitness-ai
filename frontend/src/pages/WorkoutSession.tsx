@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { PoseDetector } from '../services/PoseDetector'
 import { ExerciseCounter } from '../services/ExerciseCounter'
+import { FormAnalyzer, type FormFeedback } from '../services/FormAnalyzer'
+import { AudioFeedback } from '../services/AudioFeedback'
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils'
 import { POSE_CONNECTIONS } from '@mediapipe/pose'
-import type { ExerciseType } from '../../../shared/types'
+import { ExerciseType } from '../../../shared/types'
 import './WorkoutSession.css'
 
 const WorkoutSession = () => {
     const [isActive, setIsActive] = useState(false)
-    const [selectedExercise, setSelectedExercise] = useState<ExerciseType>('bicep_curl')
+    const [selectedExercise, setSelectedExercise] = useState<ExerciseType>(ExerciseType.BICEP_CURL)
     const [reps, setReps] = useState(0)
     const [sets, setSets] = useState(0)
     const [currentSet, setCurrentSet] = useState(1)
@@ -16,11 +18,15 @@ const WorkoutSession = () => {
     const [angle, setAngle] = useState<number | undefined>()
     const [error, setError] = useState<string | null>(null)
     const [cameraReady, setCameraReady] = useState(false)
+    const [clinicalMode, setClinicalMode] = useState(false)
+    const [formFeedback, setFormFeedback] = useState<FormFeedback | null>(null)
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const poseDetectorRef = useRef<PoseDetector | null>(null)
     const exerciseCounterRef = useRef<ExerciseCounter | null>(null)
+    const formAnalyzerRef = useRef<FormAnalyzer | null>(null)
+    const audioFeedbackRef = useRef<AudioFeedback | null>(null)
 
     useEffect(() => {
         // Initialize detectors
@@ -32,6 +38,8 @@ const WorkoutSession = () => {
         })
 
         exerciseCounterRef.current = new ExerciseCounter()
+        formAnalyzerRef.current = new FormAnalyzer()
+        audioFeedbackRef.current = new AudioFeedback()
 
         return () => {
             stopWorkout()
@@ -50,6 +58,7 @@ const WorkoutSession = () => {
             exerciseCounterRef.current.reset()
             setReps(0)
             setFeedback('מוכן להתחיל!')
+            audioFeedbackRef.current?.speak('מתחילים אימון, בהצלחה!', 'low')
 
             // Start pose detector
             await poseDetectorRef.current.start(videoRef.current)
@@ -100,13 +109,35 @@ const WorkoutSession = () => {
                 }
 
                 // Process exercise
-                if (exerciseCounterRef.current) {
+                if (exerciseCounterRef.current && formAnalyzerRef.current) {
+                    // 1. Analyze Form
+                    const formResult = formAnalyzerRef.current.analyze(
+                        results.landmarks,
+                        selectedExercise
+                    )
+                    setFormFeedback(formResult)
+
+                    if (formResult && !formResult.isValid) {
+                        // Speak correction if urgent
+                        if (formResult.severity === 'danger' || formResult.severity === 'warning') {
+                            audioFeedbackRef.current?.speak(formResult.correction || formResult.message, 'high')
+                        }
+                    }
+
+                    // 2. Count Reps
                     const result = exerciseCounterRef.current.processFrame(
                         results.landmarks,
                         selectedExercise
                     )
 
-                    setReps(result.count)
+                    // Only count if form is valid (in clinical mode)
+                    if (!clinicalMode || (formResult?.isValid ?? true)) {
+                        if (result.count > reps) {
+                            audioFeedbackRef.current?.speak(result.count.toString(), 'low')
+                        }
+                        setReps(result.count)
+                    }
+
                     setFeedback(result.feedback || '')
                     setAngle(result.angle)
                 }
@@ -133,6 +164,7 @@ const WorkoutSession = () => {
         poseDetectorRef.current?.stop()
         setIsActive(false)
         setCameraReady(false)
+        audioFeedbackRef.current?.speak('אימון נעצר', 'low')
     }
 
     const finishSet = () => {
@@ -142,6 +174,7 @@ const WorkoutSession = () => {
             exerciseCounterRef.current?.reset()
             setReps(0)
             setFeedback(`סט ${currentSet} הושלם! מוכן לסט הבא?`)
+            audioFeedbackRef.current?.speak(`כל הכבוד! סיימת את הסט ה-${currentSet}`, 'low')
         }
     }
 
@@ -151,6 +184,7 @@ const WorkoutSession = () => {
             sets: sets,
             totalReps: reps,
             date: new Date().toISOString(),
+            clinicalMode: clinicalMode
         }
 
         console.log('Saving workout:', workoutData)
@@ -205,6 +239,16 @@ const WorkoutSession = () => {
                                 {feedback}
                             </div>
                         )}
+
+                        {/* Form Feedback Overlay */}
+                        {isActive && formFeedback && !formFeedback.isValid && (
+                            <div className={`form-feedback-overlay ${formFeedback.severity}`}>
+                                ⚠️ {formFeedback.message}
+                                {formFeedback.correction && (
+                                    <div className="correction">{formFeedback.correction}</div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Error Display */}
@@ -219,6 +263,7 @@ const WorkoutSession = () => {
                         <div className="camera-status">
                             <span className="status-dot"></span>
                             <span>מצלמה פעילה</span>
+                            {clinicalMode && <span className="clinical-badge">🔬 מצב מחקר</span>}
                         </div>
                     )}
 
@@ -231,10 +276,22 @@ const WorkoutSession = () => {
                                 onChange={(e) => setSelectedExercise(e.target.value as ExerciseType)}
                                 disabled={isActive}
                             >
-                                <option value="bicep_curl">🏋️ ביצפס</option>
-                                <option value="squat">🦵 כפיפות ברכיים</option>
-                                <option value="shoulder_press">💪 לחיצת כתפיים</option>
+                                <option value={ExerciseType.BICEP_CURL}>🏋️ ביצפס</option>
+                                <option value={ExerciseType.SQUAT}>🦵 כפיפות ברכיים</option>
+                                <option value={ExerciseType.SHOULDER_PRESS}>💪 לחיצת כתפיים</option>
                             </select>
+                        </div>
+
+                        <div className="control-group checkbox-group">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={clinicalMode}
+                                    onChange={(e) => setClinicalMode(e.target.checked)}
+                                    disabled={isActive}
+                                />
+                                מצב מחקר (Clinical Mode)
+                            </label>
                         </div>
 
                         <div className="control-buttons">
@@ -315,11 +372,10 @@ const WorkoutSession = () => {
                         <h3>📝 הוראות</h3>
                         <ul>
                             <li>בחר תרגיל מהרשימה</li>
+                            <li>סמן "מצב מחקר" אם ברצונך להקפיד על טכניקה מושלמת</li>
                             <li>לחץ "התחל אימון" והרשה גישה למצלמה</li>
                             <li>עמוד מול המצלמה כך שכל הגוף נראה</li>
-                            <li>בצע את התרגיל - המערכת תספור אוטומטית!</li>
-                            <li>לחץ "סיים סט" כשמסיים סט</li>
-                            <li>לחץ "שמור אימון" לשמירת התוצאות</li>
+                            <li>בצע את התרגיל - המערכת תספור ותיתן משוב קולי!</li>
                         </ul>
                     </div>
                 </div>

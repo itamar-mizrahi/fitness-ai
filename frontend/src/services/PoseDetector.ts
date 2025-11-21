@@ -5,7 +5,7 @@
  * and tremor analysis.
  */
 
-import { Pose, Results } from '@mediapipe/pose'
+import * as mpPose from '@mediapipe/pose'
 import { Camera } from '@mediapipe/camera_utils'
 import type { Landmark, PoseResults } from '../../../shared/types'
 
@@ -20,7 +20,7 @@ export interface PoseDetectorConfig {
 export type PoseCallback = (results: PoseResults) => void
 
 export class PoseDetector {
-  private pose: Pose | null = null
+  private pose: mpPose.Pose | null = null
   private camera: Camera | null = null
   private callbacks: PoseCallback[] = []
   private isRunning = false
@@ -33,7 +33,7 @@ export class PoseDetector {
    * Initialize MediaPipe Pose
    */
   private initializePose() {
-    this.pose = new Pose({
+    this.pose = new mpPose.Pose({
       locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
       },
@@ -47,27 +47,25 @@ export class PoseDetector {
       enableSegmentation: this.config.enableSegmentation ?? false,
     })
 
-    this.pose.onResults((results: Results) => {
+    this.pose.onResults((results: mpPose.Results) => {
       this.handleResults(results)
     })
   }
 
   /**
-   * Start camera and pose detection
+   * Start camera and detection
    */
-  async start(videoElement: HTMLVideoElement): Promise<void> {
-    if (!this.pose) {
-      throw new Error('Pose detector not initialized')
-    }
+  async start(videoElement: HTMLVideoElement) {
+    if (this.isRunning) return
 
     this.camera = new Camera(videoElement, {
       onFrame: async () => {
-        if (this.pose && videoElement.readyState >= 2) {
+        if (this.pose && videoElement) {
           await this.pose.send({ image: videoElement })
         }
       },
-      width: 640,
-      height: 480,
+      width: 1280,
+      height: 720,
     })
 
     await this.camera.start()
@@ -77,35 +75,15 @@ export class PoseDetector {
   /**
    * Stop detection
    */
-  stop() {
+  async stop() {
     if (this.camera) {
-      this.camera.stop()
+      await this.camera.stop()
       this.camera = null
     }
     this.isRunning = false
   }
 
-  /**
-   * Handle pose detection results
-   */
-  private handleResults(results: Results) {
-    if (!results.poseLandmarks) {
-      return
-    }
 
-    const poseResults: PoseResults = {
-      landmarks: results.poseLandmarks.map((lm) => ({
-        x: lm.x,
-        y: lm.y,
-        z: lm.z,
-        visibility: lm.visibility,
-      })),
-      timestamp: Date.now(),
-    }
-
-    // Notify all callbacks
-    this.callbacks.forEach((cb) => cb(poseResults))
-  }
 
   /**
    * Subscribe to pose results
@@ -117,6 +95,26 @@ export class PoseDetector {
     return () => {
       this.callbacks = this.callbacks.filter((cb) => cb !== callback)
     }
+  }
+
+  /**
+   * Handle MediaPipe results
+   */
+  private handleResults(results: mpPose.Results) {
+    if (!results.poseLandmarks) return
+
+    const poseResults: PoseResults = {
+      landmarks: results.poseLandmarks.map((lm: any) => ({
+        x: lm.x,
+        y: lm.y,
+        z: lm.z,
+        visibility: lm.visibility,
+      })),
+      timestamp: Date.now(),
+    }
+
+    // Notify all callbacks
+    this.callbacks.forEach((cb) => cb(poseResults))
   }
 
   /**

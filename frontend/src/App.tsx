@@ -23,7 +23,7 @@ function App() {
     }
 
     return (
-        <Router>
+        <Router basename="/fitness-ai">
             <Routes>
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
 
